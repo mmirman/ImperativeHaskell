@@ -1,3 +1,8 @@
+{-# LANGUAGE
+ GADTs,
+ EmptyDataDecls 
+ #-}
+
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  For
@@ -6,14 +11,9 @@
 -- Portability :  portable
 --
 -- A module for C Style haskell code.
---
------------------------------------------------------------------------------
 
-{-# LANGUAGE                                                                                                                                         
- GADTs,                                                                                                                                                        
- EmptyDataDecls                                                                                                                                         
- #-}
 module For where
+
 import Prelude hiding (break)
 import Control.Monad.Cont
 import Control.Monad.Reader
