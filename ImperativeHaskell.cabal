@@ -9,10 +9,6 @@ Name:                ImperativeHaskell
 -- standards guiding when and how versions should be incremented.
 Version:             0.1
 
--- A short (one-line) description of the package.
-Synopsys:            A monad for imperative style computation
-
-
 -- A longer description of the package.
 Description:         A monad that uses GADTs and continuations
                      to replicate what it is like to program
