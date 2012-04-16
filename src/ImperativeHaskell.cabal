@@ -1,0 +1,48 @@
+Name:                ImperativeHaskell
+
+Version:             0.1
+
+Description:         A monad that uses GADTs and continuations
+                     to replicate what it is like to program
+                     in an imperative language like C or Java
+                     with "return", "for", "break", "continue", 
+                     and mutable references.
+
+Homepage:            https://github.com/mmirman/ImperativeHaskell
+
+License:             GPL-3
+
+License-file:        LICENSE
+
+Author:              Matthew Mirman
+
+Maintainer:          mmirman@andrew.cmu.edu
+
+Category:            Control
+
+Build-type:          Simple
+
+Extra-source-files:  README
+Cabal-version:       >=1.2
+
+
+
+Library
+  
+  Build-depends:       base >= 3, 
+                       mtl > 2.0 && < 3.0
+
+  Exposed-modules:    Control.Monad.Imperative,
+                      Control.Monad.Imperative.ImperativeMonad,
+                      Control.Monad.Imperative.ImperativeOperators
+  
+  Extensions: GADTs, EmptyDataDecls, NoMonomorphismRestriction
+    
+Executable test1
+  Main-is: Main.hs
+  Other-Modules: Control.Monad.Imperative
+  Build-depends: base
+    
+source-repository head
+  type:     git
+  location: git://github.com/mmirman/ImperativeHaskell.git
