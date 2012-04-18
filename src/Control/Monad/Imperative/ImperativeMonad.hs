@@ -59,6 +59,7 @@ data Control r = InFunction (r -> ContT r IO ())
                         , controlReturn:: r -> MIO r ()
                         }
 
+returnF :: V a b b -> MIO b b
 returnF v = do
   v' <- val v
   a <- ask
@@ -113,7 +114,6 @@ auto a = do
 prim :: a -> V Val r a
 prim a = L a
 
-
 infixr 0 =:
 
 (=:) :: V Var r a -> V b r a -> MIO r ()
@@ -137,12 +137,12 @@ if' b m = do
   v <- val b
   when v m
 
-
 modifyOp :: (a->b->a) -> V Var r a -> V k r b -> MIO r ()
 modifyOp op (R ar) br = do
   b <- val br
   liftIO $ modifyIORef ar (\v -> op v b)
 
+liftOp2 :: (t -> t' -> a) -> V b r t -> V b' r t' -> V Comp r a
 liftOp2 foo ar br = C $ do
   a <- val ar
   b <- val br

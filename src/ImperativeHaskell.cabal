@@ -1,6 +1,6 @@
 Name:                ImperativeHaskell
 
-Version:             0.1
+Version:             0.1.0.0
 
 Description:         A monad that uses GADTs and continuations
                      to replicate what it is like to program
@@ -28,7 +28,7 @@ Library
   
   Build-depends:       base >= 3, 
                        mtl > 2.0 && < 3.0
-
+		       
   Exposed-modules:    Control.Monad.Imperative,
                       Control.Monad.Imperative.ImperativeMonad,
                       Control.Monad.Imperative.ImperativeOperators

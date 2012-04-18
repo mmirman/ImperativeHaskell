@@ -8,7 +8,8 @@
 -- Author      :  Matthew Mirman ( mmirman@andrew.cmu.edu )
 -- Stability   :  experimental
 -- Portability :  portable
--- Description :  A test/example module for Control.Monad.Imperative
+-- Description :  An example module for Control.Monad.Imperative
+-- 
 -- License     :  GNUv3
 -- 
 -- Copyright (C) 2012  Matthew Mirman
