@@ -22,10 +22,7 @@ Category:            Control
 
 Build-type:          Simple
 
-Extra-source-files:  README
 Cabal-version:       >=1.2
-
-
 
 Library
   
