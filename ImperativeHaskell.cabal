@@ -1,7 +1,5 @@
 Name:                ImperativeHaskell
-
 Version:             0.1.0.0
-
 Description:         A monad that uses GADTs and continuations
                      to replicate what it is like to program
                      in an imperative language like C or Java
@@ -16,17 +14,17 @@ License-file:        LICENSE
 
 Author:              Matthew Mirman
 
-Maintainer:          mmirman@andrew.cmu.edu
+Maintainer:          Matthew Mirman <mmirman@andrew.cmu.edu>
 
 Category:            Control
 
 Build-type:          Simple
 
-Cabal-version:       >=1.2
+Cabal-version:       >=1.6
 
 Library
   
-  Build-depends:       base >= 3, 
+  Build-depends:       base >= 3 && < 4, 
                        mtl > 2.0 && < 3.0
 		       
   Exposed-modules:    Control.Monad.Imperative,
