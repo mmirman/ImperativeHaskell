@@ -1,1 +1,6 @@
 Just proof that Haskell' can be truly imperative, and even look like C.
+
+For some background, look in http://kormacode.blogspot.com/2011/11/c-style-haskell_10.html
+
+For an example usage, look in Main.hs.
+

@@ -24,8 +24,8 @@ Build-type:          Simple
 Cabal-version:       >=1.6
 
 Source-repository head
-  type:     git
-  location: git://github.com/mmirman/ImperativeHaskell.git
+  Type:     git
+  Location: git://github.com/mmirman/ImperativeHaskell.git
 
 Library
   
