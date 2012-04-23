@@ -7,13 +7,13 @@
 -- Maintainer  :  Matthew Mirman <mmirman@andrew.cmu.edu>
 -- Stability   :  experimental
 -- Portability :  NoMonomorphismRestriction
+-- License     :  GNU-3
 -- Description :  Some predefined operators for the imperative monad.
--- License     :  GNUv3
 -- 
 -----------------------------------------------------------------------------
 module Control.Monad.Imperative.ImperativeOperators where
 
-import Control.Monad.Imperative.ImperativeMonad
+import Control.Monad.Imperative.ImperativeMonad (modifyOp, liftOp2)
 
 
 (+=:) = modifyOp (+)

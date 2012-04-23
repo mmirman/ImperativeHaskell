@@ -9,8 +9,7 @@
 -- Stability   :  experimental
 -- Portability :  portable
 -- Description :  An example module for Control.Monad.Imperative
--- 
--- License     :  GNUv3
+-- License     :  GNU-3
 -- 
 -- Copyright (C) 2012  Matthew Mirman
 -- 
@@ -29,37 +28,47 @@
 
 module Main where
 
-import Prelude hiding (break)
 import Control.Monad.Imperative
 
 swap(r1, r2) = function $ do
 {
-    z <- auto undefined;
+    z <- new auto;
     z =: r1;
     r1 =: r2;
     r2 =: z;
 };
 
+imperativeId(r1) = function $ do
+{
+    return' r1;
+};
+
 factorial = function $ do
 {
-    a <- auto 0;
-    n <- auto 1;
-    for ( a =: prim 1 , a <. prim 11 , a +=: prim 1 ) $ do
+    a <- new 0;
+    n <- new 1;
+    for' ( a =: Lit 1 , a <. Lit 11 , a +=: Lit 1 ) $ do
     {
         n *=: a;
-        if' ( a <. prim 7)
-            continue;
+        if' ( a <. Lit 7)
+            continue';
+        
 
-        if' ( a >. prim 5)
-            break;
+        
+        if' ( a >. Lit 5) 
+            break';
+
+        return' a;
     };
-
+    
+    a =: imperativeId(a);
+    
     swap( (&)n , (&)a);
-
-    returnF n;
+    
+    return' n;
 };
 
  
 main = do
   t <- runImperative factorial
-  putStrLn $ "Some Factorial: "++show t
+  putStrLn $ "Some Factorial: "++show (t :: Int)
