@@ -7,8 +7,7 @@
 -- Maintainer  :  Matthew Mirman <mmirman@andrew.cmu.edu>
 -- Stability   :  experimental
 -- Portability :  NoMonomorphismRestriction
--- License     :  GNU-3
--- Description :  Some predefined operators for the imperative monad.
+-- Some predefined operators for the imperative monad.
 -- 
 -----------------------------------------------------------------------------
 module Control.Monad.Imperative.ImperativeOperators where

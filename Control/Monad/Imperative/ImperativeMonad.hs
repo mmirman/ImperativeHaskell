@@ -17,8 +17,8 @@
 --                GeneralizedNewtypeDeriving, MultiParamTypeClasses,
 --                FunctionalDependencies, FlexibleInstances,
 --                UndecidableInstances
--- License     :  GNU-3
--- Description :  A module for Imperative haskell code.
+-- A module which defines the monad for ImperativeHaskell,  
+-- and some control operator to interact with 'MIO'
 -- 
 -----------------------------------------------------------------------------
 module Control.Monad.Imperative.ImperativeMonad 

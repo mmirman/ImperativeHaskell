@@ -9,7 +9,6 @@
 -- Stability   :  experimental
 -- Portability :  portable
 -- Description :  An example module for Control.Monad.Imperative
--- License     :  GNU-3
 -- 
 -- Copyright (C) 2012  Matthew Mirman
 -- 

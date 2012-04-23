@@ -4,8 +4,7 @@
 -- Maintainer  :  Matthew Mirman <mmirman@andrew.cmu.edu>
 -- Stability   :  experimental
 -- Portability :  portable
--- Description :  A front end for the ImperativeMonad
--- License     :  GNUv3
+-- A front end for the ImperativeMonad
 -- 
 -----------------------------------------------------------------------------
 module Control.Monad.Imperative (module X) where
