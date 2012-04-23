@@ -36,5 +36,5 @@ Library
                       Control.Monad.Imperative.ImperativeMonad,
                       Control.Monad.Imperative.ImperativeOperators
   
-  Extensions: GADTs, EmptyDataDecls, NoMonomorphismRestriction
+  Extensions: GADTs, EmptyDataDecls, NoMonomorphismRestriction,  GeneralizedNewtypeDeriving,  MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, UndecidableInstances
     

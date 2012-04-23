@@ -13,7 +13,10 @@
 -- Module      :  Control.Monad.Imperative.ImperativeMonad
 -- Maintainer  :  Matthew Mirman <mmirman@andrew.cmu.edu>
 -- Stability   :  experimental
--- Portability :  GADTs, EmptyDataDecls
+-- Portability :  GADTs, EmptyDataDecls, 
+--                GeneralizedNewtypeDeriving, MultiParamTypeClasses,
+--                FunctionalDependencies, FlexibleInstances,
+--                UndecidableInstances
 -- License     :  GNU-3
 -- Description :  A module for Imperative haskell code.
 -- 
