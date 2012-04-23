@@ -41,7 +41,6 @@ module Control.Monad.Imperative.ImperativeMonad
        , liftOp4         
        , liftOp5
        , V(Lit)
-       , returnF
        , (=:)
        , (&)
        ) where
