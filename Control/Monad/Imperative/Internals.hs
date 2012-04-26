@@ -3,10 +3,7 @@
  EmptyDataDecls,
  GeneralizedNewtypeDeriving,
  MultiParamTypeClasses,
- FunctionalDependencies,
- FlexibleInstances,
- UndecidableInstances,
- ExistentialQuantification
+ FlexibleInstances
  #-}
 
 -----------------------------------------------------------------------------
@@ -14,10 +11,8 @@
 -- Module      :  Control.Monad.Imperative.Internals
 -- Maintainer  :  Matthew Mirman <mmirman@andrew.cmu.edu>
 -- Stability   :  experimental
--- Portability :  GADTs, EmptyDataDecls, 
---                GeneralizedNewtypeDeriving, MultiParamTypeClasses,
---                FunctionalDependencies, FlexibleInstances,
---                UndecidableInstances
+-- Portability :  GADTs, EmptyDataDecls, GeneralizedNewtypeDeriving, 
+--                MultiParamTypeClasses, FlexibleInstances
 -- A module which defines the monad for ImperativeHaskell,  
 -- and some control operator to interact with 'MIO'
 -- 
@@ -37,6 +32,7 @@ module Control.Monad.Imperative.Internals
        , auto
        , runImperative
        , V(Lit, C)
+       , ValTp
        , MIO()
        , Comp
        , Val
@@ -57,6 +53,10 @@ data Var
 data Val
 data Comp
 
+class ValTp b where
+instance ValTp Var where
+instance ValTp Val where
+instance ValTp Comp where
 
 data Control r = InFunction (r -> ContT r IO ()) 
                | InLoop { controlBreak :: MIO r () 
@@ -69,7 +69,7 @@ data Control r = InFunction (r -> ContT r IO ())
 -- returned value into the current continuation.  Note, this
 -- doesn't work inside of loops.  Inside of loops, we need
 -- 'returnV'
-returnF :: V a b b -> MIO b b
+returnF :: ValTp a => V a b b -> MIO b b
 returnF v = MIO $ do
   v' <- getMIO $ val v
   a <- ask
@@ -82,14 +82,14 @@ returnF v = MIO $ do
 -- if called, it will exit the current function and place the 
 -- returned value into the current continuation.  Note, this
 -- doesn't work as a last function call.
-returnV :: V a b b -> MIO b ()
+returnV :: ValTp a => V a b b -> MIO b ()
 returnV a = returnF a >> return ()
 
 class Returnable b r where
   -- | @'return''@ can act as returnF or returnV depending on use
   -- if it does not work, it is likely that type inference
   -- could not figure out a sensible alternative.
-  return' :: V a b b -> MIO b r
+  return' :: ValTp a => V a b b -> MIO b r
 
 instance Returnable b () where
   return' a = returnV a 
@@ -122,12 +122,14 @@ break' = MIO ask >>= controlBreak
 continue' :: MIO a ()
 continue' = MIO ask >>= controlContinue
 
+
+
 data V b r a where
   R :: IORef a -> V Var r a
   Lit :: a -> V Val r a
-  C :: MIO r (V b r a) -> V Comp r a
+  C :: ValTp b => MIO r (V b r a) -> V Comp r a
 
-val :: V b r a -> MIO r a
+val :: ValTp b => V b r a -> MIO r a
 val v = case v of
   R r -> MIO $ liftIO $ readIORef r
   Lit v -> return v
@@ -158,7 +160,7 @@ class Assignable valt where
   -- to the location pointed to by @variable@
   (=:) :: V Var r a -> valt r a -> MIO r ()
   
-instance Assignable (V b) where  
+instance ValTp b => Assignable (V b) where  
   (=:) (R ar) br = MIO $ do
     b <- getMIO $ val br
     liftIO $ writeIORef ar b
@@ -169,7 +171,7 @@ instance Assignable MIO where
     a =: Lit b
 
 -- | @'for''(init, check, incr)@ acts like its imperative @for@ counterpart
-for' :: (MIO r irr1, V b r Bool, MIO r irr2) -> MIO r () -> MIO r ()
+for' :: ValTp b => (MIO r irr1, V b r Bool, MIO r irr2) -> MIO r () -> MIO r ()
 for' (init, check, incr) body = init >> for_r
   where for_r = do
           do_comp <- val check
@@ -181,12 +183,12 @@ for' (init, check, incr) body = init >> for_r
                          for_r
 
 -- | @'while''(check)@ acts like its imperative @while@ counterpart.
-while' :: V b r Bool -> MIO r () -> MIO r ()
+while' :: ValTp b => V b r Bool -> MIO r () -> MIO r ()
 while' check = for'(return (), check, return () )
 
 -- | @'if''(check) act@ only performs @act@ if @check@ evaluates to true
 -- it is specifically a value in its argument.
-if' :: V b r Bool -> MIO r () -> MIO r ()
+if' :: ValTp b => V b r Bool -> MIO r () -> MIO r ()
 if' b m = do
   v <- val b
   when v m
@@ -195,7 +197,7 @@ if' b m = do
 -- out of a binary haskell function.
 -- The suggested use is to replicate functionality of assignments
 -- like @-=@ or @%=@ from C style languages.
-modifyOp :: (a->b->a) -> V Var r a -> V k r b -> MIO r ()
+modifyOp :: ValTp k => (a->b->a) -> V Var r a -> V k r b -> MIO r ()
 modifyOp op (R ar) br = MIO $ do
   b <- getMIO $ val br
   liftIO $ modifyIORef ar (\v -> op v b)
