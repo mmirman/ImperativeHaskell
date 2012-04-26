@@ -30,8 +30,8 @@ Source-repository head
 Library
   
   Build-depends:       base >= 4.0 && < 5.0, 
-                       mtl >= 2.0 && < 3.0
-		       template-haskell >= 2.6 && < 3
+                       mtl >= 2.0 && < 3.0,
+                       template-haskell >= 2.6 && < 3
   Exposed-modules:    Control.Monad.Imperative,
                       Control.Monad.Imperative.Internals,
                       Control.Monad.Imperative.Operators,
