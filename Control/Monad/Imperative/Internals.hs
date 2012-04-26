@@ -108,21 +108,17 @@ function :: MIO a a -> MIO b a
 function = MIO . liftIO . runImperative
 
 -- | @'break''@ exists the current loop.
+-- if called outside of a loop, rather than throwing a compilation error,
+-- it will simply return a runtime error.
 break' :: MIO a ()
-break' = do
-  a <- MIO $ ask
-  case a of
-    InLoop br _ _ -> br
-    _ -> return ()
-    
+break' = MIO ask >>= controlBreak
+
 -- | 'continue'' continues the current loop, passing over
 -- any control flow that is defined.
+-- if called outside of a loop, rather than throwing a compilation error,
+-- it will simply return a runtime error.
 continue' :: MIO a ()
-continue' = do
-  a <- MIO $ ask
-  case a of
-    InLoop _ con _ -> con
-    _ -> return ()
+continue' = MIO ask >>= controlContinue
 
 data V b r a where
   R :: IORef a -> V Var r a
@@ -149,7 +145,6 @@ new :: a -> MIO r (V Var r a)
 new a = do
   r <- MIO $ liftIO $ newIORef a
   return $ R r
-
 
 
 infixr 0 =:

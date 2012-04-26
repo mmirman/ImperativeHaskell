@@ -30,6 +30,6 @@ import Control.Monad.Imperative.FunctionFactory
 
 -- | @'liftOp2' f@ turns a pure function into one which
 -- gets executes its arguments and returns their value as a 
--- function
+-- function.  It is defined using 'liftOp'.
 liftOp2 :: (a -> b -> c) -> V b1 r a -> V b2 r b -> V Comp r c
 liftOp2 v = $(liftOp 'v)

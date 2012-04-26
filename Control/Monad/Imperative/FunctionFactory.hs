@@ -7,9 +7,8 @@
 -- Maintainer  :  Matthew Mirman <mmirman@andrew.cmu.edu>
 -- Stability   :  experimental
 -- Portability :  TemplateHaskell
--- A module which defines the monad for ImperativeHaskell,  
--- and some control operator to interact with 'MIO'
--- 
+-- A module which defines a function 'liftIO' which coverts pure functions 
+-- into reference taking functions.
 -----------------------------------------------------------------------------
 
 module Control.Monad.Imperative.FunctionFactory
@@ -23,12 +22,22 @@ import Data.Functor
 -- | @'liftOp' nm@ is a function factory producer which uses template 
 -- to infer the type of its argument and output an impure function factory.
 -- 
--- It can be used to convert a pure function into an
--- > liftFooTuple (v :: ((a,b),b) -> c) = $(liftOp 'v)
+-- The argument @nm@ must be a quoted name with type already known.
+-- 
+-- Examples:
+-- > liftSomeFoo (v :: a -> ((a,b),b) -> c) = $(liftOp 'v)
+-- >
+-- > plus = $(liftOp '(+))
+-- > 
+-- > letBound = let f a = a * 5 in $(liftOp 'f)
+-- > 
+-- > argument n = $(liftOp 'mod) 4 n
 -- 
 -- If the function factories produce will be used in the same file that produced them
--- the output typesignature needs to be known before it is called, 
+-- the output type needs to be known before 'liftOp' is called, 
 -- such as in the definition of 'liftOp2'.
+-- 
+-- Currently 'liftOp' does not support unboxed tuples.
 liftOp :: Name -> Q Exp
 liftOp nm = do
   let getTy (VarI _ ty _ _) = ty
