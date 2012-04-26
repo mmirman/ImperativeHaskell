@@ -1,5 +1,4 @@
 {-# LANGUAGE
- NoMonomorphismRestriction,
  TemplateHaskell
  #-}
 -----------------------------------------------------------------------------
@@ -7,7 +6,7 @@
 -- Module      :  Control.Monad.Imperative.Operators
 -- Maintainer  :  Matthew Mirman <mmirman@andrew.cmu.edu>
 -- Stability   :  experimental
--- Portability :  NoMonomorphismRestriction, TemplateHaskell 
+-- Portability :  TemplateHaskell 
 -- Some predefined operators for the imperative monad.
 -- 
 -----------------------------------------------------------------------------
@@ -16,17 +15,17 @@ module Control.Monad.Imperative.Operators where
 import Control.Monad.Imperative.Internals
 import Control.Monad.Imperative.FunctionFactory
 
-(+=:) = modifyOp (+)
-(*=:) = modifyOp (*)
-(-=:) = modifyOp (-)
-(%=:) = modifyOp (mod)
+(+=:) a b = modifyOp (+) a b
+(*=:) a b = modifyOp (*) a b
+(-=:) a b = modifyOp (-) a b
+(%=:) a b = modifyOp mod a b
 
-(<.) = liftOp2 (<)
-(>.) = liftOp2 (>)
-(+.) = liftOp2 (+)
-(*.) = liftOp2 (*)
-(%.) = liftOp2 mod
-(/.) = liftOp2 (/)
+(<.) a b = liftOp2 (<) a b
+(>.) a b = liftOp2 (>) a b
+(+.) a b = liftOp2 (+) a b
+(*.) a b = liftOp2 (*) a b
+(%.) a b = liftOp2 mod a b
+(/.) a b = liftOp2 (/) a b 
 
 -- | @'liftOp2' f@ turns a pure function into one which
 -- gets executes its arguments and returns their value as a 
