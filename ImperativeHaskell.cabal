@@ -1,5 +1,5 @@
 Name:                ImperativeHaskell
-Version:             0.2.1.0
+Version:             1.0.0.0
 Description:         A monad that uses GADTs and continuations
                      to replicate what it is like to program
                      in an imperative language like C or Java
@@ -30,11 +30,12 @@ Source-repository head
 Library
   
   Build-depends:       base >= 4.0 && < 5.0, 
-                       mtl > 2.0 && < 3.0
-		       
+                       mtl >= 2.0 && < 3.0
+		       template-haskell >= 2.6 && < 3
   Exposed-modules:    Control.Monad.Imperative,
-                      Control.Monad.Imperative.ImperativeMonad,
-                      Control.Monad.Imperative.ImperativeOperators
+                      Control.Monad.Imperative.Internals,
+                      Control.Monad.Imperative.Operators,
+                      Control.Monad.Imperative.FunctionFactory
   
-  Extensions: GADTs, EmptyDataDecls, NoMonomorphismRestriction,  GeneralizedNewtypeDeriving,  MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, UndecidableInstances
+  Extensions: GADTs, EmptyDataDecls, NoMonomorphismRestriction,  GeneralizedNewtypeDeriving,  MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances, UndecidableInstances, TemplateHaskell
     

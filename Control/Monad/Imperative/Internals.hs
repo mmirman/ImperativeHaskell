@@ -10,7 +10,7 @@
 
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Control.Monad.Imperative.ImperativeMonad
+-- Module      :  Control.Monad.Imperative.Internals
 -- Maintainer  :  Matthew Mirman <mmirman@andrew.cmu.edu>
 -- Stability   :  experimental
 -- Portability :  GADTs, EmptyDataDecls, 
@@ -21,7 +21,7 @@
 -- and some control operator to interact with 'MIO'
 -- 
 -----------------------------------------------------------------------------
-module Control.Monad.Imperative.ImperativeMonad 
+module Control.Monad.Imperative.Internals
        ( modifyOp
        , if'
        , for'
@@ -35,14 +35,14 @@ module Control.Monad.Imperative.ImperativeMonad
        , new
        , auto
        , runImperative
-       , liftOp
-       , liftOp2
-       , liftOp3         
-       , liftOp4         
-       , liftOp5
-       , V(Lit)
+       , V(Lit, C)
+       , MIO()
+       , Comp
+       , Val
+       , Var
        , (=:)
        , (&)
+       , val
        ) where
 
 import Control.Monad.Cont
@@ -107,7 +107,7 @@ runImperative foo = do
 function :: MIO a a -> MIO b a
 function = MIO . liftIO . runImperative
 
--- | @'break'@ exists the current loop.
+-- | @'break''@ exists the current loop.
 break' :: MIO a ()
 break' = do
   a <- MIO $ ask
@@ -115,7 +115,7 @@ break' = do
     InLoop br _ _ -> br
     _ -> return ()
     
--- | @'continue'@ continues the current loop, passing over
+-- | 'continue'' continues the current loop, passing over
 -- any control flow that is defined.
 continue' :: MIO a ()
 continue' = do
@@ -129,7 +129,6 @@ data V b r a where
   Lit :: a -> V Val r a
   C :: MIO r (V b r a) -> V Comp r a
 
-
 val :: V b r a -> MIO r a
 val v = case v of
   R r -> MIO $ liftIO $ readIORef r
@@ -140,23 +139,27 @@ val v = case v of
 (&) :: V Var r a -> V Var s a
 (&) (R a) = R a
 
--- | @auto@ should just be used where the 
+-- | 'auto' should just be used where the 
 -- type can be automatically infered and we don't need an initial value
+-- Use caution, as it is simply an alternate name for 'undefined'
 auto = undefined
 
--- | @new@ constructs a new reference object with the value specified
+-- | 'new' constructs a new reference to the specified pure value
 new :: a -> MIO r (V Var r a)
 new a = do
   r <- MIO $ liftIO $ newIORef a
   return $ R r
 
+
+
 infixr 0 =:
 
-
-class Assignable val where 
-  -- | @var '=:' value@ simply rewrites whatever 
-  -- is in @var@ with whatever @value@ is.
-  (=:) :: V Var r a -> val r a -> MIO r ()
+-- | The 'Assignable' class is used to specify a value which can be 
+-- computed imperatively.
+class Assignable valt where 
+  -- | @variable '=:' value@ executes @value@ and writes it  
+  -- to the location pointed to by @variable@
+  (=:) :: V Var r a -> valt r a -> MIO r ()
   
 instance Assignable (V b) where  
   (=:) (R ar) br = MIO $ do
@@ -168,7 +171,7 @@ instance Assignable MIO where
     b <- br
     a =: Lit b
 
--- | @'for'(init, check, incr)@ acts like the usual imperative for loop
+-- | @'for''(init, check, incr)@ acts like its imperative @for@ counterpart
 for' :: (MIO r irr1, V b r Bool, MIO r irr2) -> MIO r () -> MIO r ()
 for' (init, check, incr) body = init >> for_r
   where for_r = do
@@ -180,52 +183,22 @@ for' (init, check, incr) body = init >> for_r
                          incr
                          for_r
 
--- | @'while'(check)@ acts like the usual imperative while
+-- | @'while''(check)@ acts like its imperative @while@ counterpart.
 while' :: V b r Bool -> MIO r () -> MIO r ()                         
 while' check = for'(return (), check, return () )
 
--- | @'if'(check) m@ only executes m if the check is true.
--- it is specifically value in it's argument.
+-- | @'if''(check) act@ only performs @act@ if @check@ evaluates to true
+-- it is specifically a value in its argument.
 if' :: V b r Bool -> MIO r () -> MIO r ()
 if' b m = do
   v <- val b
   when v m
 
--- | @'modifyOp' f@ makes a modify operator out of a binary 
--- haskell function
+-- | @'modifyOp'@ makes a modification assignment operator 
+-- out of a binary haskell function.
+-- The suggested use is to replicate functionality of assignments
+-- like @-=@ or @%=@ from C style languages.
 modifyOp :: (a->b->a) -> V Var r a -> V k r b -> MIO r ()
 modifyOp op (R ar) br = MIO $ do
   b <- getMIO $ val br
   liftIO $ modifyIORef ar (\v -> op v b)
-
--- | @'liftOp' f@ turns a pure function into one which
--- gets the values out of it's arguments
-liftOp foo a = C $ do
-  a' <- val a
-  return $ Lit $ foo a'
-
-liftOp2 foo a1 a2 = C $ do
-  a1' <- val a1
-  a2' <- val a2
-  return $ Lit $ foo a1' a2'
-
-liftOp3 foo v1 v2 v3 = C $ do
-  v1' <- val v1
-  v2' <- val v2
-  v3' <- val v3
-  return $ Lit $ foo v1' v2' v3'
-  
-liftOp4 foo v1 v2 v3 v4 = C $ do
-  v1' <- val v1
-  v2' <- val v2
-  v3' <- val v3
-  v4' <- val v4
-  return $ Lit $ foo v1' v2' v3' v4'
-  
-liftOp5 foo v1 v2 v3 v4 v5 = C $ do
-    v1' <- val v1
-    v2' <- val v2
-    v3' <- val v3
-    v4' <- val v4
-    v5' <- val v5  
-    return $ Lit $ foo v1' v2' v3' v5' v4'  

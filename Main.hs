@@ -1,5 +1,7 @@
 {-# LANGUAGE
- GADTs
+ GADTs,
+ TemplateHaskell,
+ ScopedTypeVariables
  #-}
 
 -----------------------------------------------------------------------------
@@ -42,6 +44,8 @@ imperativeId(r1) = function $ do
     return' r1;
 };
 
+
+
 factorial = function $ do
 {
     a <- new 0;
@@ -67,7 +71,6 @@ factorial = function $ do
     return' n;
 };
 
- 
 main = do
   t <- runImperative factorial
   putStrLn $ "Some Factorial: "++show (t :: Int)
