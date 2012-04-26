@@ -57,8 +57,6 @@ factorial = function $ do
         if' ( a <. Lit 7)
             continue';
         
-
-        
         if' ( a >. Lit 5) 
             break';
 

@@ -5,7 +5,8 @@
  MultiParamTypeClasses,
  FunctionalDependencies,
  FlexibleInstances,
- UndecidableInstances
+ UndecidableInstances,
+ ExistentialQuantification
  #-}
 
 -----------------------------------------------------------------------------
@@ -56,10 +57,11 @@ data Var
 data Val
 data Comp
 
-data Control r = InFunction (r -> ContT r IO ())
-               | InLoop { controlBreak::MIO r ()
-                        , controlContinue::MIO r ()
-                        , controlReturn:: r -> MIO r ()
+
+data Control r = InFunction (r -> ContT r IO ()) 
+               | InLoop { controlBreak :: MIO r () 
+                        , controlContinue :: MIO r () 
+                        , controlReturn :: r -> MIO r ()
                         }
 
 -- | @'returnF' value@ acts like the imperative return, where
@@ -179,7 +181,7 @@ for' (init, check, incr) body = init >> for_r
                          for_r
 
 -- | @'while''(check)@ acts like its imperative @while@ counterpart.
-while' :: V b r Bool -> MIO r () -> MIO r ()                         
+while' :: V b r Bool -> MIO r () -> MIO r ()
 while' check = for'(return (), check, return () )
 
 -- | @'if''(check) act@ only performs @act@ if @check@ evaluates to true
