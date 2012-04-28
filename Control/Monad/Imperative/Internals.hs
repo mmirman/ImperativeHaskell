@@ -3,7 +3,8 @@
  EmptyDataDecls,
  GeneralizedNewtypeDeriving,
  MultiParamTypeClasses,
- FlexibleInstances
+ FlexibleInstances,
+ FunctionalDependencies
  #-}
 
 -----------------------------------------------------------------------------
@@ -31,7 +32,7 @@ module Control.Monad.Imperative.Internals
        , new
        , auto
        , runImperative
-       , V(Lit, C)
+       , V(Lit, C)       
        , ValTp
        , MIO()
        , Comp
@@ -47,7 +48,7 @@ import Control.Monad.Reader
 import Data.IORef
 
 newtype MIO r a = MIO { getMIO :: ReaderT (Control r) (ContT r IO) a }
-                deriving (Monad, MonadCont)
+                deriving (Monad, MonadCont, MonadIO)
 
 data Var
 data Val
@@ -123,7 +124,6 @@ continue' :: MIO a ()
 continue' = MIO ask >>= controlContinue
 
 
-
 data V b r a where
   R :: IORef a -> V Var r a
   Lit :: a -> V Val r a
@@ -155,20 +155,23 @@ infixr 0 =:
 
 -- | The 'Assignable' class is used to specify a value which can be 
 -- computed imperatively.
+
 class Assignable valt where 
   -- | @variable '=:' value@ executes @value@ and writes it  
   -- to the location pointed to by @variable@
-  (=:) :: V Var r a -> valt r a -> MIO r ()
-  
+  (=:) :: V Var r a -> valt r a -> MIO r () 
+
 instance ValTp b => Assignable (V b) where  
   (=:) (R ar) br = MIO $ do
     b <- getMIO $ val br
     liftIO $ writeIORef ar b
-    
+
+
 instance Assignable MIO where  
-  (=:) a br = do
+  (=:) (R ar) br = do
     b <- br
-    a =: Lit b
+    liftIO $ writeIORef ar b
+
 
 -- | @'for''(init, check, incr)@ acts like its imperative @for@ counterpart
 for' :: ValTp b => (MIO r irr1, V b r Bool, MIO r irr2) -> MIO r () -> MIO r ()
