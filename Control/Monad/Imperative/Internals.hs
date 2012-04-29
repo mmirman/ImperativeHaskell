@@ -3,8 +3,7 @@
  EmptyDataDecls,
  GeneralizedNewtypeDeriving,
  MultiParamTypeClasses,
- FlexibleInstances,
- FunctionalDependencies
+ FlexibleInstances
  #-}
 
 -----------------------------------------------------------------------------
