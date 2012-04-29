@@ -37,5 +37,5 @@ Library
                       Control.Monad.Imperative.Operators,
                       Control.Monad.Imperative.FunctionFactory
   
-  Extensions: GADTs, EmptyDataDecls, GeneralizedNewtypeDeriving, MultiParamTypeClasses, FlexibleInstances, TemplateHaskell
+  Extensions: GADTs, EmptyDataDecls, GeneralizedNewtypeDeriving, MultiParamTypeClasses, FlexibleInstances, TemplateHaskell, 
     

@@ -4,8 +4,7 @@
  GeneralizedNewtypeDeriving,
  MultiParamTypeClasses,
  FlexibleInstances,
- FunctionalDependencies,
- RankNTypes
+ FunctionalDependencies
  #-}
 
 -----------------------------------------------------------------------------
@@ -42,7 +41,6 @@ module Control.Monad.Imperative.Internals
        , (=:)
        , (&)
        , val
-       , NumLit
        ) where
 
 import Control.Monad.Cont
@@ -126,7 +124,7 @@ break' = MIO ask >>= controlBreak
 continue' :: MIO a ()
 continue' = MIO ask >>= controlContinue
 
-type NumLit = forall r a . Num a => V Val r a
+
 
 data V b r a where
   R :: IORef a -> V Var r a

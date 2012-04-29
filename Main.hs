@@ -46,7 +46,7 @@ imperativeId(r1) = function $ do
     return' r1;
 };
 
-
+type NumLit = forall r a . Num a => V Val r a
 
 factorial = function $ do
 {
