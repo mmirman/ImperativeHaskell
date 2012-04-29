@@ -1,19 +1,18 @@
 {-# LANGUAGE
- TemplateHaskell
+ NoMonomorphismRestriction
  #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Control.Monad.Imperative.Operators
 -- Maintainer  :  Matthew Mirman <mmirman@andrew.cmu.edu>
 -- Stability   :  experimental
--- Portability :  TemplateHaskell
+-- Portability :  NoMonomorphismRestriction
 -- Some predefined operators for the imperative monad.
 -- 
 -----------------------------------------------------------------------------
 module Control.Monad.Imperative.Operators where
 
 import Control.Monad.Imperative.Internals
-import Control.Monad.Imperative.FunctionFactory
 
 (+=:), (*=:), (-=:) :: (ValTp k, Num b) => V Var r b -> V k r b -> MIO r ()
 (+=:) a b = modifyOp (+) a b
@@ -48,10 +47,15 @@ import Control.Monad.Imperative.FunctionFactory
 (||.) a b = liftOp2 (||) a b
 
 (~.) :: ValTp b1 => V b1 r Bool -> V Comp r Bool
-(~.) a = $(liftOp 'not) a
+(~.) a = C $ do 
+  a' <- val a
+  return $ Lit $ not a'
 
 -- | @'liftOp2' f@ turns a pure function into one which
 -- gets executes its arguments and returns their value as a 
 -- function.  It is defined using 'liftOp'.
 liftOp2 :: (ValTp b1, ValTp b2) => (a -> b -> c) -> V b1 r a -> V b2 r b -> V Comp r c
-liftOp2 v = $(liftOp 'v)
+liftOp2 f v1 v2 = C $ do
+  v1' <- val v1
+  v2' <- val v2
+  return $ Lit $ f v1' v2'
