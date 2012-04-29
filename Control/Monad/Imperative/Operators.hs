@@ -22,7 +22,7 @@ import Control.Monad.Imperative.Internals
 (%=:) :: (ValTp k, Integral b) => V Var r b -> V k r b -> MIO r ()
 (%=:) a b = modifyOp mod a b
 
-(<.), (>.), (<=.),(<=.) :: (ValTp b1, ValTp b2, Ord b) => V b1 r b -> V b2 r b -> V Comp r Bool
+(<.), (>.), (>=.), (<=.) :: (ValTp b1, ValTp b2, Ord b) => V b1 r b -> V b2 r b -> V Comp r Bool
 (<.) a b = liftOp2 (<) a b
 (>.) a b = liftOp2 (>) a b
 (>=.) a b = liftOp2 (>=) a b

@@ -7,7 +7,7 @@
 -- Maintainer  :  Matthew Mirman <mmirman@andrew.cmu.edu>
 -- Stability   :  experimental
 -- Portability :  TemplateHaskell
--- A module which defines a function 'liftIO' which coverts pure functions 
+-- A module which defines a function 'liftOp' which coverts pure functions 
 -- into reference taking functions.
 -----------------------------------------------------------------------------
 
