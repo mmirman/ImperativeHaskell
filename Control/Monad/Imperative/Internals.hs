@@ -4,7 +4,8 @@
  GeneralizedNewtypeDeriving,
  MultiParamTypeClasses,
  FlexibleInstances,
- FunctionalDependencies
+ FunctionalDependencies,
+ RankNTypes
  #-}
 
 -----------------------------------------------------------------------------
@@ -41,11 +42,13 @@ module Control.Monad.Imperative.Internals
        , (=:)
        , (&)
        , val
+       , NumLit
        ) where
 
 import Control.Monad.Cont
 import Control.Monad.Reader
 import Data.IORef
+import Data.String (IsString(..))
 
 newtype MIO r a = MIO { getMIO :: ReaderT (Control r) (ContT r IO) a }
                 deriving (Monad, MonadCont, MonadIO)
@@ -123,11 +126,26 @@ break' = MIO ask >>= controlBreak
 continue' :: MIO a ()
 continue' = MIO ask >>= controlContinue
 
+type NumLit = forall r a . Num a => V Val r a
 
 data V b r a where
   R :: IORef a -> V Var r a
   Lit :: a -> V Val r a
   C :: ValTp b => MIO r (V b r a) -> V Comp r a
+instance Eq a => Eq (V Val r a) where
+  (Lit a) == (Lit a') = a == a'
+instance Show a => Show (V Val r a) where
+  show (Lit a) = show a
+instance Num a => Num (V Val r a) where
+  (Lit a) + (Lit b) = Lit $ a + b
+  (Lit a) * (Lit b) = Lit $ a * b
+  abs (Lit a) = Lit $ abs a
+  signum (Lit a) = Lit $ signum a
+  fromInteger = Lit . fromInteger
+  
+instance IsString s => IsString (V Val r s) where
+  fromString = Lit . fromString
+
 
 val :: ValTp b => V b r a -> MIO r a
 val v = case v of
@@ -165,7 +183,6 @@ instance ValTp b => Assignable (V b) where
   (=:) (R ar) br = MIO $ do
     b <- getMIO $ val br
     liftIO $ writeIORef ar b
-
 
 instance Assignable MIO where  
   (=:) (R ar) br = do

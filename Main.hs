@@ -1,7 +1,9 @@
 {-# LANGUAGE
  GADTs,
  TemplateHaskell,
- ScopedTypeVariables 
+ ScopedTypeVariables, 
+ OverloadedStrings,
+ RankNTypes
  #-}
 
 -----------------------------------------------------------------------------
@@ -45,10 +47,13 @@ imperativeId(r1) = function $ do
 };
 
 
+
 factorial = function $ do
 {
     a <- new 0;
     n <- new 1;
+    
+    a =: (0 :: NumLit);
     
     for' ( a =: Lit 1 , a <. Lit 11 , a +=: Lit 1 ) $ do
     {
