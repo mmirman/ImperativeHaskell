@@ -45,7 +45,6 @@ factorial() = function $ do
         n *=: a;
         if' ( a <. Lit 5)
             continue';
-
         
         if' ( a >. Lit 2) 
             break';

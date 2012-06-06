@@ -39,11 +39,12 @@ module Control.Monad.Imperative.Internals
        , (=:)
        , (&)
        , HasValue(..)
-       , State(return')
+       , CState(return')
        )  where
 
+import Data.Functor
 import Control.Monad.Cont
-import Control.Monad.Reader
+import Control.Monad.State
 import Data.IORef
 import Data.String (IsString(..))
 
@@ -55,7 +56,7 @@ data ValueKind = TyVar
                | TyComp ControlKind ValueKind
                  
 type RCont r = ContT r IO
-type MIO_I i r a = ReaderT (Control i r) (RCont r) a
+type MIO_I i r a = StateT (Control i r) (RCont r) a
 type RetCont r = r -> RCont r ()
 
 newtype MIO i r a = MIO { getMIO :: MIO_I i r a }
@@ -87,7 +88,7 @@ instance HasValue (V b) a => HasValue (V (TyComp a b)) a where
 instance HasValue (MIO i) i where
   val m = m
 
-class State (i :: ControlKind) where 
+class CState (i :: ControlKind) where 
   type RetTy i a
   getState :: MIO i r (Control i r)
   
@@ -96,37 +97,38 @@ class State (i :: ControlKind) where
   return' :: HasValue (V a) i => V a r r -> MIO i r (RetTy i r)
   toLoop :: MIO i r a -> MIO TyInLoop r a  
   
-instance State TyInFunc where 
+instance CState TyInFunc where 
   type RetTy TyInFunc a = a
-  getState = MIO ask
+  getState = MIO get
   return' v = MIO $ do
     v' <- getMIO $ val v
-    InFunction ret <- ask
+    InFunction ret <- get
     lift $ ret v'
     return v'
 
   toLoop (MIO m) = MIO $
-    withReaderT (\(InLoop _ _ retLoop) -> InFunction retLoop) m
+    wrapState m (\s _ -> s) $ \(InLoop _ _ retLoop) -> InFunction retLoop
   
-instance State TyInLoop where 
+instance CState TyInLoop where 
   type RetTy TyInLoop a = ()
-  getState = MIO ask
+  getState = MIO get
   return' v = MIO $ do
     v' <- getMIO $ val v
-    InLoop _ _ ret <- ask
+    InLoop _ _ ret <- get
     lift $ ret v'
     return ()
 
   toLoop m = m  
-  
+
+
 -- | @'for''(init, check, incr)@ acts like its imperative @for@ counterpart
-for' :: (State i, HasValue (V b) i) => (MIO i r irr1, V b r Bool, MIO i r irr2) -> MIO TyInLoop r () -> MIO i r ()
+for' :: (CState i, HasValue (V b) i) => (MIO i r irr1, V b r Bool, MIO i r irr2) -> MIO TyInLoop r () -> MIO i r ()
 for' (init, check, incr) body = init >> for_r
     where for_r = do
             do_comp <- val check
             when do_comp $ callCC $ \break_foo -> do
                            callCC $ \continue_foo -> MIO $ do
-                             flip withReaderT (getMIO body) $ \inbod -> 
+                             wrapState (getMIO body) (\s _ -> s) $ \inbod -> 
                                InLoop (toLoop $ break_foo ()) (toLoop $ continue_foo ()) (getReturn inbod)
                            incr
                            for_r
@@ -146,9 +148,10 @@ continue' = do
 
 -- | @'runImperative'@ takes an MIO action as returned by a function, 
 -- and lifts it into IO.
-runImperative :: MIO TyInFunc a a -> IO a
+
 runImperative foo = 
-  runContT (callCC $ \ret -> runReaderT (getMIO foo) (InFunction ret)) return
+  runContT (callCC $ \ret -> fst <$> runStateT (getMIO foo) (InFunction ret)) return 
+
 
 -- | @'function' foo@ takes an ImperativeMonad action and removes it from it's  
 -- specific function context, specifically making it applicable 
@@ -168,7 +171,6 @@ instance Num a => Num (V TyVal r a) where
   fromInteger = Lit . fromInteger
 instance IsString s => IsString (V TyVal r s) where
   fromString = Lit . fromString
-
 
 -- | @('&')a@ gets a reference/pointer to the variable specified
 (&) :: V TyVar r a -> V TyVar s a
@@ -196,7 +198,7 @@ infixr 0 =:
   liftIO $ writeIORef ar b
 
 -- | @'while''(check)@ acts like its imperative @while@ counterpart.
-while' :: (HasValue (V b) i, HasValue (V b) TyInLoop, State i) => V b r Bool -> MIO TyInLoop r () -> MIO i r ()
+while' :: (HasValue (V b) i, HasValue (V b) TyInLoop, CState i) => V b r Bool -> MIO TyInLoop r () -> MIO i r ()
 while' check = for'(return (), check, return () )
 
 -- | @'if''(check) act@ only performs @act@ if @check@ evaluates to true
@@ -214,3 +216,10 @@ modifyOp :: (HasValue (V TyVar) i, HasValue (V k) i) => (a->b->a) -> V TyVar r a
 modifyOp op (R ar) br = MIO $ do
   b <- getMIO $ val br
   liftIO $ modifyIORef ar (\v -> op v b)
+
+wrapState :: Monad m => StateT s m a -> (s' -> s -> s') -> (s' -> s) -> StateT s' m a
+wrapState st fOut fIn = do
+  sp <- get
+  (a, s) <- lift $ runStateT st $ fIn sp
+  put $ fOut sp s
+  return a
