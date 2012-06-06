@@ -3,11 +3,9 @@
  GeneralizedNewtypeDeriving,
  MultiParamTypeClasses,
  FlexibleInstances,
- ExistentialQuantification,
  FlexibleContexts,
  UndecidableInstances,
  TypeFamilies,
- ScopedTypeVariables,
  FunctionalDependencies,
  DataKinds
  #-}
@@ -19,9 +17,9 @@
 -- Stability   :  experimental
 -- Portability :  GADTs, EmptyDataDecls, GeneralizedNewtypeDeriving, 
 --                MultiParamTypeClasses, FlexibleInstances
+-- 
 -- A module which defines the monad for ImperativeHaskell,  
 -- and some control operator to interact with 'MIO'
--- 
 -----------------------------------------------------------------------------
 module Control.Monad.Imperative.Internals
        ( modifyOp
@@ -41,7 +39,7 @@ module Control.Monad.Imperative.Internals
        , (=:)
        , (&)
        , HasValue(..)
-       , State(..)
+       , State(return')
        )  where
 
 import Control.Monad.Cont
@@ -55,10 +53,12 @@ data ControlKind = TyInLoop
 data ValueKind = TyVar
                | TyVal
                | TyComp ControlKind ValueKind
+                 
+type RCont r = ContT r IO
+type MIO_I i r a = ReaderT (Control i r) (RCont r) a
+type RetCont r = r -> RCont r ()
 
-
-
-newtype MIO i r a = MIO { getMIO :: ReaderT (Control i r) (ContT r IO) a }
+newtype MIO i r a = MIO { getMIO :: MIO_I i r a }
                   deriving (Monad, MonadCont, MonadIO)
   
 data V (b :: ValueKind) r a where
@@ -67,20 +67,15 @@ data V (b :: ValueKind) r a where
   C :: MIO i r (V b r a) -> V (TyComp i b) r a
   
 data Control (i :: ControlKind) r where  
-  InFunction :: (r -> ContT r IO ()) -> Control TyInFunc r
-  InLoop :: MIO TyInLoop r () -> MIO TyInLoop r () -> (r -> ContT r IO ()) -> Control i r
+  InFunction :: RetCont r -> Control TyInFunc r
+  InLoop :: MIO TyInLoop r () -> MIO TyInLoop r () -> RetCont r -> Control i r
 
-getReturn :: Control i r -> r -> ContT r IO ()
+getReturn :: Control i r -> RetCont r
 getReturn (InFunction ret) = ret
 getReturn (InLoop _ _ ret) = ret
 
-mioLoop :: ReaderT (Control TyInLoop r) (ContT r IO) a -> MIO TyInLoop r a
-mioLoop = MIO 
-
-mioFunc :: ReaderT (Control TyInFunc r) (ContT r IO) a -> MIO TyInFunc r a
-mioFunc = MIO
-
-
+-- | Although the functional dependency @b -> i@ is declared, 
+-- it does not do anything useful. 
 class HasValue b (i :: ControlKind) | b -> i where
   val :: b r a -> MIO i r a
 instance HasValue (V TyVar) i where
@@ -95,13 +90,15 @@ instance HasValue (MIO i) i where
 class State (i :: ControlKind) where 
   type RetTy i a
   getState :: MIO i r (Control i r)
+  
+  -- | @'return'' value@ acts like an imperative return. It passes
+  -- the given value to the return continuation.
   return' :: HasValue (V a) i => V a r r -> MIO i r (RetTy i r)
   toLoop :: MIO i r a -> MIO TyInLoop r a  
   
-
 instance State TyInFunc where 
   type RetTy TyInFunc a = a
-  getState = mioFunc ask
+  getState = MIO ask
   return' v = MIO $ do
     v' <- getMIO $ val v
     InFunction ret <- ask
@@ -113,7 +110,7 @@ instance State TyInFunc where
   
 instance State TyInLoop where 
   type RetTy TyInLoop a = ()
-  getState = mioLoop ask
+  getState = MIO ask
   return' v = MIO $ do
     v' <- getMIO $ val v
     InLoop _ _ ret <- ask
@@ -122,6 +119,7 @@ instance State TyInLoop where
 
   toLoop m = m  
   
+-- | @'for''(init, check, incr)@ acts like its imperative @for@ counterpart
 for' :: (State i, HasValue (V b) i) => (MIO i r irr1, V b r Bool, MIO i r irr2) -> MIO TyInLoop r () -> MIO i r ()
 for' (init, check, incr) body = init >> for_r
     where for_r = do
@@ -133,28 +131,30 @@ for' (init, check, incr) body = init >> for_r
                            incr
                            for_r
 
-  
+-- | @'break''@ exists the current loop.  
 break' :: MIO TyInLoop r ()
 break' = do
   InLoop b _ _ <- getState
   b
 
+-- | 'continue'' continues the current loop, passing over
+-- any control flow that is defined.
 continue' :: MIO TyInLoop r ()
 continue' = do
   InLoop _ c _ <- getState
   c
 
+-- | @'runImperative'@ takes an MIO action as returned by a function, 
+-- and lifts it into IO.
 runImperative :: MIO TyInFunc a a -> IO a
-runImperative foo = do
-  a <- runContT (callCC $ \ret -> runReaderT (getMIO foo) $ InFunction ret) return
-  return a
+runImperative foo = 
+  runContT (callCC $ \ret -> runReaderT (getMIO foo) (InFunction ret)) return
 
 -- | @'function' foo@ takes an ImperativeMonad action and removes it from it's  
 -- specific function context, specifically making it applicable 
 -- in the body of other functions.
 function ::  MIO TyInFunc a a -> MIO i b a
 function = MIO . liftIO . runImperative
-
 
 instance Eq a => Eq (V TyVal r a) where
   (Lit a) == (Lit a') = a == a'
@@ -186,32 +186,14 @@ new a = do
   r <- MIO $ liftIO $ newIORef a
   return $ R r
 
-
 infixr 0 =:
 
--- | The 'Assignable' class is used to specify a value which can be 
--- computed imperatively.
-
+-- | @variable '=:' value@ executes @value@ and writes it  
+-- to the location pointed to by @variable@
 (=:) :: (HasValue valt i, HasValue (V TyVar) i) => V TyVar r a -> valt r a -> MIO i r () 
 (R ar) =: br = MIO $ do
   b <- getMIO $ val br
   liftIO $ writeIORef ar b
-  
-{-class Assignable i valt where 
-  -- | @variable '=:' value@ executes @value@ and writes it  
-  -- to the location pointed to by @variable@
-  (=:) :: HasValue TyVar i => V TyVar r a -> valt r a -> MIO i r () 
-
-instance HasValue b i => Assignable i (V b) where  
-  (=:) (R ar) br = MIO $ do
-    b <- getMIO $ val br
-    liftIO $ writeIORef ar b
-
-instance Assignable i (MIO i) where  
-  (=:) (R ar) br = do
-    b <- br
-    liftIO $ writeIORef ar b
--}
 
 -- | @'while''(check)@ acts like its imperative @while@ counterpart.
 while' :: (HasValue (V b) i, HasValue (V b) TyInLoop, State i) => V b r Bool -> MIO TyInLoop r () -> MIO i r ()
