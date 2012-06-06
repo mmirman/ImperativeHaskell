@@ -1,5 +1,8 @@
 {-# LANGUAGE
- NoMonomorphismRestriction
+ NoMonomorphismRestriction,
+ DataKinds,
+ TypeFamilies,
+ FlexibleContexts
  #-}
 -----------------------------------------------------------------------------
 -- |
@@ -14,47 +17,47 @@ module Control.Monad.Imperative.Operators where
 
 import Control.Monad.Imperative.Internals
 
-(+=:), (*=:), (-=:) :: (ValTp k, Num b) => V Var r b -> V k r b -> MIO r ()
+(+=:), (*=:), (-=:) :: (HasValue (V k) i, Num b) => V TyVar r b -> V k r b -> MIO i r ()
 (+=:) a b = modifyOp (+) a b
 (*=:) a b = modifyOp (*) a b
 (-=:) a b = modifyOp (-) a b
 
-(%=:) :: (ValTp k, Integral b) => V Var r b -> V k r b -> MIO r ()
+(%=:) :: (HasValue (V k) i, Integral b) => V TyVar r b -> V k r b -> MIO i r ()
 (%=:) a b = modifyOp mod a b
 
-(<.), (>.), (>=.), (<=.) :: (ValTp b1, ValTp b2, Ord b) => V b1 r b -> V b2 r b -> V Comp r Bool
+(<.), (>.), (>=.), (<=.) :: (Ord c, HasValue (V b1) i, HasValue (V b2) i) => V b1 r c -> V b2 r c -> V (TyComp i TyVal) r Bool
 (<.) a b = liftOp2 (<) a b
 (>.) a b = liftOp2 (>) a b
 (>=.) a b = liftOp2 (>=) a b
 (<=.) a b = liftOp2 (<=) a b
 
-(==.) :: (ValTp b1, ValTp b2, Eq b) => V b1 r b -> V b2 r b -> V Comp r Bool
+(==.) :: (Eq c, HasValue (V b1) i, HasValue (V b2) i) => V b1 r c -> V b2 r c -> V (TyComp i TyVal) r Bool
 (==.) a b = liftOp2 (==) a b
 
-(+.), (-.), (*.) :: (ValTp b1, ValTp b2, Num c) => V b1 r c -> V b2 r c -> V Comp r c
+(+.), (-.), (*.) :: (Num c, HasValue (V b1) i, HasValue (V b2) i) => V b1 r c -> V b2 r c -> V (TyComp i TyVal) r c
 (+.) a b = liftOp2 (+) a b
 (-.) a b = liftOp2 (-) a b
 (*.) a b = liftOp2 (*) a b
 
-(%.) :: (ValTp b1, ValTp b2, Integral c) => V b1 r c -> V b2 r c -> V Comp r c
+(%.) :: (Integral c, HasValue (V b1) i, HasValue (V b2) i) => V b1 r c -> V b2 r c -> V (TyComp i 'TyVal) r c
 (%.) a b = liftOp2 mod a b
 
-(/.) :: (ValTp b1, ValTp b2, Fractional c) => V b1 r c -> V b2 r c -> V Comp r c
+(/.) :: (State i, HasValue (V b1) i, HasValue (V b2) i, Fractional c) => V b1 r c -> V b2 r c -> V (TyComp i TyVal) r c
 (/.) a b = liftOp2 (/) a b 
 
-(&&.), (||.) :: (ValTp b1, ValTp b2) => V b1 r Bool -> V b2 r Bool -> V Comp r Bool
+(&&.), (||.) :: (State i, HasValue (V b1) i , HasValue (V b2) i) => V b1 r Bool -> V b2 r Bool -> V (TyComp i TyVal) r Bool
 (&&.) a b = liftOp2 (&&) a b
 (||.) a b = liftOp2 (||) a b
 
-(~.) :: ValTp b1 => V b1 r Bool -> V Comp r Bool
+(~.) :: (State i, HasValue (V b) i) => V b r Bool -> V (TyComp i TyVal) r Bool
 (~.) a = C $ do 
   a' <- val a
   return $ Lit $ not a'
 
 -- | @'liftOp2' f@ turns a pure function into one which
--- gets executes its arguments and returns their value as a 
+-- gets executes its arguments and returns their value as a
 -- function.  It is defined using 'liftOp'.
-liftOp2 :: (ValTp b1, ValTp b2) => (a -> b -> c) -> V b1 r a -> V b2 r b -> V Comp r c
+liftOp2 :: (HasValue (V b1) i, HasValue (V b2) i) => (a -> b -> c) -> V b1 r a -> V b2 r b -> V (TyComp i TyVal) r c
 liftOp2 f v1 v2 = C $ do
   v1' <- val v1
   v2' <- val v2
