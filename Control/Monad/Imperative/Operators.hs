@@ -1,6 +1,5 @@
 {-# LANGUAGE
  NoMonomorphismRestriction,
- DataKinds,
  TypeFamilies,
  FlexibleContexts
  #-}
@@ -39,7 +38,7 @@ import Control.Monad.Imperative.Internals
 (-.) a b = liftOp2 (-) a b
 (*.) a b = liftOp2 (*) a b
 
-(%.) :: (Integral c, HasValue r  (V b1 r) i, HasValue r  (V b2 r) i) => V b1 r c -> V b2 r c -> V (TyComp i 'TyVal) r c
+(%.) :: (Integral c, HasValue r  (V b1 r) i, HasValue r  (V b2 r) i) => V b1 r c -> V b2 r c -> V (TyComp i TyVal) r c
 (%.) a b = liftOp2 mod a b
 
 (/.) :: (HasValue r  (V b1 r) i, HasValue r  (V b2 r) i, Fractional c) => V b1 r c -> V b2 r c -> V (TyComp i TyVal) r c

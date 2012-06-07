@@ -1,5 +1,4 @@
 {-# LANGUAGE
- DataKinds,
  RankNTypes,
  TemplateHaskell,
  NoMonomorphismRestriction

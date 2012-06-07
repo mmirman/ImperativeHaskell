@@ -6,8 +6,7 @@
  FlexibleContexts,
  UndecidableInstances,
  TypeFamilies,
- FunctionalDependencies,
- DataKinds
+ FunctionalDependencies
  #-}
 
 -----------------------------------------------------------------------------
@@ -36,8 +35,11 @@ module Control.Monad.Imperative.Internals
        , io
        , V(Lit, C)       
        , MIO()
-       , ValueKind(..)
-       , ControlKind(..)         
+       , TyInLoop
+       , TyInFunc
+       , TyVar
+       , TyVal
+       , TyComp
        , (=:)
        , (&)
        , HasValue(..)
@@ -50,12 +52,12 @@ import Control.Monad.State
 import Data.IORef
 import Data.String (IsString(..))
 
-data ControlKind = TyInLoop
-                 | TyInFunc
+data TyInLoop
+data TyInFunc
 
-data ValueKind = TyVar
-               | TyVal
-               | TyComp ControlKind ValueKind
+data TyVar
+data TyVal
+data TyComp i v
                  
 type RCont r = ContT r IO
 type MIO_I i r a = StateT (Control i r) (RCont r) a
@@ -64,12 +66,12 @@ type RetCont r = r -> RCont r ()
 newtype MIO i r a = MIO { getMIO :: MIO_I i r a }
                   deriving (Monad, MonadCont, MonadIO)
   
-data V (b :: ValueKind) r a where
+data V b r a where
   R :: IORef a -> V TyVar r a
   Lit :: a -> V TyVal r a
   C :: MIO i r (V b r a) -> V (TyComp i b) r a
   
-data Control (i :: ControlKind) r where  
+data Control i r where  
   InFunction :: RetCont r -> Control TyInFunc r
   InLoop :: MIO TyInLoop r () -> MIO TyInLoop r () -> RetCont r -> Control i r
 
@@ -79,7 +81,7 @@ getReturn (InLoop _ _ ret) = ret
 
 -- | Although the functional dependency @b -> i@ is declared, 
 -- it does not do anything useful. 
-class HasValue r b (i :: ControlKind) | b -> r i where
+class HasValue r b i | b -> r i where
   val :: b a -> MIO i r a
 instance HasValue r (V TyVar r) i where
   val (R r) = MIO $ liftIO $ readIORef r
@@ -93,7 +95,7 @@ instance HasValue r (MIO i r) i where
 instance HasValue r IO i where
   val m = liftIO m  
 
-class CState (i :: ControlKind) where 
+class CState i where 
   type RetTy i a
   getState :: MIO i r (Control i r)
   
@@ -157,6 +159,8 @@ continue' = do
 runWithRet :: MIO TyInFunc r a-> RetCont r -> RCont r a
 runWithRet m r = fmap fst $ runStateT (getMIO m) $ InFunction r
 
+-- | 'defer'' executes the given action (or value) before the 
+-- function returns.
 defer' :: HasValue r valt TyInFunc  => valt a -> MIO i r ()
 defer' m = MIO $ do
   c <- get

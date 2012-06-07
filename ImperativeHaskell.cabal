@@ -1,10 +1,28 @@
 Name:                ImperativeHaskell
-Version:             1.1.1.0
-Description:         A monad that uses GADTs and continuations
-                     to replicate what it is like to program
-                     in an imperative language like C or Java
-                     with "return", "for", "break", "continue", 
-                     and mutable references.
+Version:             2.0.0.0
+Description:
+  A monad that uses GADTs and continuations to replicate what it is like to program
+  in an imperative language like C, Java or Go with "return", "for", "break", "continue", 
+  and mutable references.
+  .
+  In Version 2:
+  .
+  * Single return function: @return'@
+  .
+  * A Go language style @defer'@ primitive.
+  .
+  * Proper compiler errors when @break'@ and @continue'@ are used incorrectly
+  . 
+  * /Note/: Version 2 has a very different internal structure from version 1, 
+    and thus there will likely be type signature conflicts.
+  .
+  For more information see:
+  . 
+  * Examples on github <http://github.com/mmirman/ImperativeHaskell/blob/master/Main.hs>
+  .
+  * The relevant blog post <http://kormacode.blogspot.com/2011/11/c-style-haskell_10.html>
+  
+
 Synopsis:	     A library for writing Imperative style haskell.
 
 Homepage:            https://github.com/mmirman/ImperativeHaskell
@@ -37,5 +55,13 @@ Library
                       Control.Monad.Imperative.Operators,
                       Control.Monad.Imperative.FunctionFactory
   
-  Extensions: GADTs, EmptyDataDecls, GeneralizedNewtypeDeriving, MultiParamTypeClasses, FlexibleInstances, TemplateHaskell 
-    
+  Extensions: GADTs, 
+              EmptyDataDecls, 
+              GeneralizedNewtypeDeriving, 
+              MultiParamTypeClasses, 
+              FlexibleInstances, 
+              FlexibleContexts,
+              TemplateHaskell,
+              UndecidableInstances,
+              TypeFamilies,
+              FunctionalDependencies
