@@ -28,10 +28,12 @@ module Control.Monad.Imperative.Internals
        , while'
        , break'
        , continue'
+       , defer'
        , function 
        , new
        , auto
        , runImperative
+       , io
        , V(Lit, C)       
        , MIO()
        , ValueKind(..)
@@ -40,7 +42,7 @@ module Control.Monad.Imperative.Internals
        , (&)
        , HasValue(..)
        , CState(return')
-       )  where
+       ) where
 
 import Data.Functor
 import Control.Monad.Cont
@@ -77,16 +79,19 @@ getReturn (InLoop _ _ ret) = ret
 
 -- | Although the functional dependency @b -> i@ is declared, 
 -- it does not do anything useful. 
-class HasValue b (i :: ControlKind) | b -> i where
-  val :: b r a -> MIO i r a
-instance HasValue (V TyVar) i where
+class HasValue r b (i :: ControlKind) | b -> r i where
+  val :: b a -> MIO i r a
+instance HasValue r (V TyVar r) i where
   val (R r) = MIO $ liftIO $ readIORef r
-instance HasValue (V TyVal) i where
+instance HasValue r (V TyVal r) i where
   val (Lit v) = return v
-instance HasValue (V b) a => HasValue (V (TyComp a b)) a where
+instance HasValue r (V b r) a => HasValue r (V (TyComp a b) r) a where
   val (C m) = val =<< m
-instance HasValue (MIO i) i where
+instance HasValue r (MIO i r) i where
   val m = m
+
+instance HasValue r IO i where
+  val m = liftIO m  
 
 class CState (i :: ControlKind) where 
   type RetTy i a
@@ -94,7 +99,7 @@ class CState (i :: ControlKind) where
   
   -- | @'return'' value@ acts like an imperative return. It passes
   -- the given value to the return continuation.
-  return' :: HasValue (V a) i => V a r r -> MIO i r (RetTy i r)
+  return' :: HasValue r (V a r) i => V a r r -> MIO i r (RetTy i r)
   toLoop :: MIO i r a -> MIO TyInLoop r a  
   
 instance CState TyInFunc where 
@@ -107,8 +112,8 @@ instance CState TyInFunc where
     return v'
 
   toLoop (MIO m) = MIO $
-    wrapState m (\s _ -> s) $ \(InLoop _ _ retLoop) -> InFunction retLoop
-  
+    wrapState m statefulRetCont $ \(InLoop _ _ retLoop) -> InFunction retLoop
+
 instance CState TyInLoop where 
   type RetTy TyInLoop a = ()
   getState = MIO get
@@ -120,16 +125,19 @@ instance CState TyInLoop where
 
   toLoop m = m  
 
+statefulRetCont :: Control t r -> Control i r -> Control t r
+statefulRetCont (InLoop a b _) = InLoop a b . getReturn
+statefulRetCont (InFunction _) = InFunction . getReturn
 
 -- | @'for''(init, check, incr)@ acts like its imperative @for@ counterpart
-for' :: (CState i, HasValue (V b) i) => (MIO i r irr1, V b r Bool, MIO i r irr2) -> MIO TyInLoop r () -> MIO i r ()
+for' :: (CState i, HasValue r (V b r) i, HasValue r valt TyInLoop) => (MIO i r irr1, V b r Bool, MIO i r irr2) -> valt () -> MIO i r ()
 for' (init, check, incr) body = init >> for_r
     where for_r = do
             do_comp <- val check
             when do_comp $ callCC $ \break_foo -> do
-                           callCC $ \continue_foo -> MIO $ do
-                             wrapState (getMIO body) (\s _ -> s) $ \inbod -> 
-                               InLoop (toLoop $ break_foo ()) (toLoop $ continue_foo ()) (getReturn inbod)
+                           callCC $ \continue_foo -> MIO $
+                             wrapState (getMIO $ val body) statefulRetCont $ \inbod -> 
+                                InLoop (toLoop $ break_foo ()) (toLoop $ continue_foo ()) (getReturn inbod)
                            incr
                            for_r
 
@@ -146,9 +154,19 @@ continue' = do
   InLoop _ c _ <- getState
   c
 
+runWithRet :: MIO TyInFunc r a-> RetCont r -> RCont r a
+runWithRet m r = fmap fst $ runStateT (getMIO m) $ InFunction r
+
+defer' :: HasValue r valt TyInFunc  => valt a -> MIO i r ()
+defer' m = MIO $ do
+  c <- get
+  put $ case c of 
+    InLoop a b r -> InLoop a b $ \i -> runWithRet (val m) r >> r i
+    InFunction r -> InFunction $ \i -> runWithRet (val m) r >> r i
+    
 -- | @'runImperative'@ takes an MIO action as returned by a function, 
 -- and lifts it into IO.
-
+runImperative :: MIO TyInFunc a a -> IO a
 runImperative foo = 
   runContT (callCC $ \ret -> fst <$> runStateT (getMIO foo) (InFunction ret)) return 
 
@@ -183,7 +201,7 @@ instance IsString s => IsString (V TyVal r s) where
 auto = undefined
 
 -- | 'new' constructs a new reference to the specified pure value
-new :: (HasValue (V TyVar) i) => a -> MIO i r (V TyVar r a)
+new :: (HasValue r (V TyVar r) i) => a -> MIO i r (V TyVar r a)
 new a = do
   r <- MIO $ liftIO $ newIORef a
   return $ R r
@@ -192,27 +210,27 @@ infixr 0 =:
 
 -- | @variable '=:' value@ executes @value@ and writes it  
 -- to the location pointed to by @variable@
-(=:) :: (HasValue valt i, HasValue (V TyVar) i) => V TyVar r a -> valt r a -> MIO i r () 
+(=:) :: (HasValue r valt i, HasValue r (V TyVar r) i) => V TyVar r a -> valt a -> MIO i r () 
 (R ar) =: br = MIO $ do
   b <- getMIO $ val br
   liftIO $ writeIORef ar b
 
 -- | @'while''(check)@ acts like its imperative @while@ counterpart.
-while' :: (HasValue (V b) i, HasValue (V b) TyInLoop, CState i) => V b r Bool -> MIO TyInLoop r () -> MIO i r ()
+while' :: (HasValue r (V b r) i, HasValue r (V b r) TyInLoop, HasValue r valt TyInLoop, CState i) => V b r Bool -> valt () -> MIO i r ()
 while' check = for'(return (), check, return () )
 
 -- | @'if''(check) act@ only performs @act@ if @check@ evaluates to true
 -- it is specifically a value in its argument.
-if' :: (HasValue (V b) i) => V b r Bool -> MIO i r () -> MIO i r ()
+if' :: (HasValue r (V b r) i, HasValue r valt i) => V b r Bool -> valt () -> MIO i r ()
 if' b m = do
   v <- val b
-  when v m
+  when v (val m)
 
 -- | @'modifyOp'@ makes a modification assignment operator 
 -- out of a binary haskell function.
 -- The suggested use is to replicate functionality of assignments
 -- like @-=@ or @%=@ from C style languages.
-modifyOp :: (HasValue (V TyVar) i, HasValue (V k) i) => (a->b->a) -> V TyVar r a -> V k r b -> MIO i r ()
+modifyOp :: (HasValue r (V TyVar r) i, HasValue r (V k r) i) => (a->b->a) -> V TyVar r a -> V k r b -> MIO i r ()
 modifyOp op (R ar) br = MIO $ do
   b <- getMIO $ val br
   liftIO $ modifyIORef ar (\v -> op v b)
@@ -223,3 +241,8 @@ wrapState st fOut fIn = do
   (a, s) <- lift $ runStateT st $ fIn sp
   put $ fOut sp s
   return a
+
+-- | @'io' action@ takes a haskell 'IO' @action@ and makes it useable from within
+-- the MIO monad.
+io :: IO a -> MIO TyInFunc r a
+io = liftIO
